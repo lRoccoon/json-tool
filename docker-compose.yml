@@ -1,0 +1,13 @@
+services:
+  json-tool:
+    build: .
+    image: json-tool:latest
+    container_name: json-tool
+    restart: unless-stopped
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
+    name: traefik
