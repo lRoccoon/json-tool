@@ -29,7 +29,7 @@ export function chineseToUnicode(text: string): string {
   let out = '';
   for (const ch of text) {
     const code = ch.codePointAt(0)!;
-    if (code > 0x7e || code < 0x20) {
+    if (code > 0x7e) {
       if (code <= 0xffff) {
         out += '\\u' + code.toString(16).padStart(4, '0');
       } else {
@@ -123,3 +123,100 @@ export type JsonValue =
   | null
   | JsonValue[]
   | { [key: string]: JsonValue };
+
+export type SearchScope = 'all' | 'key' | 'value';
+export type SortKeysMode = 'none' | 'asc' | 'desc';
+
+export interface MatchResult {
+  matches: string[];
+  ancestors: Set<string>;
+}
+
+export function sortObjectEntries<T>(
+  entries: [string, T][],
+  mode: SortKeysMode
+): [string, T][] {
+  if (mode === 'none') return entries;
+  const sorted = entries.slice().sort((a, b) => a[0].localeCompare(b[0]));
+  return mode === 'asc' ? sorted : sorted.reverse();
+}
+
+export function collectMatches(
+  value: unknown,
+  scope: SearchScope,
+  query: string,
+  sortMode: SortKeysMode = 'none'
+): MatchResult {
+  const matches: string[] = [];
+  const ancestors = new Set<string>();
+  const q = query.trim().toLowerCase();
+  if (!q) return { matches, ancestors };
+
+  const walk = (
+    v: unknown,
+    path: string,
+    keyLabel: string | number | null,
+    stack: string[]
+  ) => {
+    const keyIsString = typeof keyLabel === 'string';
+    const keyMatch =
+      scope !== 'value' && keyIsString &&
+      (keyLabel as string).toLowerCase().includes(q);
+
+    let nestedContainer: unknown = null;
+    if (typeof v === 'string' && isLikelyJsonString(v)) {
+      const res = tryParseJson(v);
+      if (res.ok && res.value !== null && typeof res.value === 'object') {
+        nestedContainer = res.value;
+      }
+    }
+
+    const isPrimitive =
+      v === null ||
+      typeof v === 'string' ||
+      typeof v === 'number' ||
+      typeof v === 'boolean';
+    const valueMatch =
+      scope !== 'key' &&
+      isPrimitive &&
+      nestedContainer === null &&
+      String(v).toLowerCase().includes(q);
+
+    if (keyMatch || valueMatch) {
+      matches.push(path);
+      for (const p of stack) ancestors.add(p);
+    }
+
+    if (Array.isArray(v)) {
+      const next = stack.concat(path);
+      v.forEach((child, i) => walk(child, `${path}/${i}`, i, next));
+    } else if (v !== null && typeof v === 'object') {
+      const next = stack.concat(path);
+      const entries = sortObjectEntries(
+        Object.entries(v as Record<string, unknown>),
+        sortMode
+      );
+      for (const [k, child] of entries) {
+        walk(child, `${path}/${k}`, k, next);
+      }
+    } else if (nestedContainer !== null) {
+      const next = stack.concat(path);
+      if (Array.isArray(nestedContainer)) {
+        nestedContainer.forEach((child, i) =>
+          walk(child, `${path}/${i}`, i, next)
+        );
+      } else {
+        const entries = sortObjectEntries(
+          Object.entries(nestedContainer as Record<string, unknown>),
+          sortMode
+        );
+        for (const [k, child] of entries) {
+          walk(child, `${path}/${k}`, k, next);
+        }
+      }
+    }
+  };
+
+  walk(value, '', null, []);
+  return { matches, ancestors };
+}

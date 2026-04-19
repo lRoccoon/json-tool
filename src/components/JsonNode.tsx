@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   isLikelyJsonString,
+  sortObjectEntries,
   tryParseJson,
   unescapeString,
+  type SearchScope,
+  type SortKeysMode,
 } from '../utils/jsonUtils';
 
 export interface TreeApi {
@@ -13,6 +16,13 @@ export interface TreeApi {
   isUnescaped: (path: string) => boolean;
   toggleUnescaped: (path: string) => void;
   onOpenValue: (text: string, title?: string) => void;
+  sortKeys: SortKeysMode;
+  search: {
+    query: string;
+    scope: SearchScope;
+    currentPath: string | null;
+    registerNode: (path: string, el: HTMLElement | null) => void;
+  };
 }
 
 interface JsonNodeProps {
@@ -25,6 +35,38 @@ interface JsonNodeProps {
 }
 
 const LONG_VALUE_THRESHOLD = 120;
+
+function highlightText(
+  text: string,
+  query: string,
+  isCurrent: boolean
+): ReactNode {
+  if (!query) return text;
+  const lower = text.toLowerCase();
+  const q = query.toLowerCase();
+  if (!lower.includes(q)) return text;
+  const parts: ReactNode[] = [];
+  let i = 0;
+  let n = 0;
+  while (i < text.length) {
+    const idx = lower.indexOf(q, i);
+    if (idx === -1) {
+      parts.push(text.slice(i));
+      break;
+    }
+    if (idx > i) parts.push(text.slice(i, idx));
+    parts.push(
+      <mark
+        key={n++}
+        className={`jn-mark${isCurrent ? ' jn-mark-current' : ''}`}
+      >
+        {text.slice(idx, idx + q.length)}
+      </mark>
+    );
+    i = idx + q.length;
+  }
+  return parts;
+}
 
 export function JsonNode(props: JsonNodeProps) {
   const { value, api, path } = props;
@@ -80,7 +122,10 @@ function ContainerNode({
 
   const entries: [string | number, unknown][] = isArr
     ? (effectiveValue as unknown[]).map((v, i) => [i, v])
-    : Object.entries(effectiveValue as Record<string, unknown>);
+    : sortObjectEntries(
+        Object.entries(effectiveValue as Record<string, unknown>),
+        api.sortKeys
+      );
 
   const openBracket = isArr ? '[' : '{';
   const closeBracket = isArr ? ']' : '}';
@@ -95,8 +140,13 @@ function ContainerNode({
     setTimeout(() => setCopied(false), 900);
   };
 
+  const isCurrent = api.search.currentPath === path;
+
   return (
-    <div className="jn">
+    <div
+      className={`jn${isCurrent ? ' jn-current' : ''}`}
+      ref={(el) => api.search.registerNode(path, el)}
+    >
       <div className="jn-row">
         {!empty ? (
           <button
@@ -109,7 +159,11 @@ function ContainerNode({
         ) : (
           <span className="jn-toggle jn-toggle-empty" />
         )}
-        <KeyLabel keyLabel={keyLabel} />
+        <KeyLabel
+          keyLabel={keyLabel}
+          query={api.search.scope !== 'value' ? api.search.query : ''}
+          isCurrent={isCurrent}
+        />
         {isNestedView && (
           <span className="jn-badge" title="此值为 JSON 字符串，已解析为嵌套结构">
             nested
@@ -175,22 +229,28 @@ function PrimitiveNode({ value, keyLabel, path, api }: JsonNodeProps) {
   const strValue = isString ? (value as string) : '';
   const displayStr = isUnescaped ? unescapeString(strValue) : strValue;
 
-  let content: React.ReactNode;
+  const isCurrent = api.search.currentPath === path;
+  const keyQuery = api.search.scope !== 'value' ? api.search.query : '';
+  const valueQuery = api.search.scope !== 'key' ? api.search.query : '';
+
+  let content: ReactNode;
   let valueClass = '';
   if (value === null) {
-    content = 'null';
+    content = highlightText('null', valueQuery, isCurrent);
     valueClass = 'jn-v-null';
   } else if (typeof value === 'boolean') {
-    content = String(value);
+    content = highlightText(String(value), valueQuery, isCurrent);
     valueClass = 'jn-v-bool';
   } else if (typeof value === 'number') {
-    content = String(value);
+    content = highlightText(String(value), valueQuery, isCurrent);
     valueClass = 'jn-v-num';
   } else if (isString) {
     content = (
       <>
         <span className="jn-quote">"</span>
-        <span className="jn-str-text">{displayStr}</span>
+        <span className="jn-str-text">
+          {highlightText(displayStr, valueQuery, isCurrent)}
+        </span>
         <span className="jn-quote">"</span>
       </>
     );
@@ -203,6 +263,17 @@ function PrimitiveNode({ value, keyLabel, path, api }: JsonNodeProps) {
   const isLong = isString && strValue.length > LONG_VALUE_THRESHOLD;
   const hasEscape = isString && /\\["'\\/bfnrt]|\\u[0-9a-fA-F]{4}/.test(strValue);
 
+  const hasValueMatch =
+    !!valueQuery &&
+    (isString
+      ? displayStr.toLowerCase().includes(valueQuery.toLowerCase())
+      : value !== undefined && String(value).toLowerCase().includes(valueQuery.toLowerCase()));
+  const hasKeyMatch =
+    !!keyQuery &&
+    typeof keyLabel === 'string' &&
+    keyLabel.toLowerCase().includes(keyQuery.toLowerCase());
+  const hasMatch = hasValueMatch || hasKeyMatch;
+
   const copy = () => {
     const text = isString ? strValue : String(value);
     navigator.clipboard.writeText(text);
@@ -211,10 +282,15 @@ function PrimitiveNode({ value, keyLabel, path, api }: JsonNodeProps) {
   };
 
   return (
-    <div className="jn">
+    <div
+      className={`jn${isCurrent ? ' jn-current' : ''}${
+        hasMatch ? ' jn-has-match' : ''
+      }`}
+      ref={(el) => api.search.registerNode(path, el)}
+    >
       <div className="jn-row jn-leaf">
         <span className="jn-toggle jn-toggle-empty" />
-        <KeyLabel keyLabel={keyLabel} />
+        <KeyLabel keyLabel={keyLabel} query={keyQuery} isCurrent={isCurrent} />
         <span className={`jn-value ${valueClass} ${isLong ? 'jn-v-long' : ''}`}>
           {content}
         </span>
@@ -260,7 +336,15 @@ function PrimitiveNode({ value, keyLabel, path, api }: JsonNodeProps) {
   );
 }
 
-function KeyLabel({ keyLabel }: { keyLabel: string | number | null }) {
+function KeyLabel({
+  keyLabel,
+  query,
+  isCurrent,
+}: {
+  keyLabel: string | number | null;
+  query: string;
+  isCurrent: boolean;
+}) {
   if (keyLabel === null) return null;
   if (typeof keyLabel === 'number') {
     return (
@@ -272,7 +356,9 @@ function KeyLabel({ keyLabel }: { keyLabel: string | number | null }) {
   }
   return (
     <>
-      <span className="jn-key">"{keyLabel}"</span>
+      <span className="jn-key">
+        "{highlightText(keyLabel, query, isCurrent)}"
+      </span>
       <span className="jn-punct">: </span>
     </>
   );
