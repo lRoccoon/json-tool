@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   formatHistoryTimestamp,
   getHistoryPreview,
@@ -22,6 +22,17 @@ export function HistoryPanel({
 }: HistoryPanelProps) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    if (open) {
+      closeButtonRef.current?.focus();
+    } else {
+      triggerRef.current?.focus();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -63,10 +74,12 @@ export function HistoryPanel({
     <section className="history-panel" aria-label="最近输入历史" ref={panelRef}>
       <button
         type="button"
+        ref={triggerRef}
         className={`history-trigger${open ? ' is-open' : ''}`}
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="dialog"
+        aria-controls={open ? 'history-popover' : undefined}
         aria-label={entries.length > 0 ? `打开历史记录，当前 ${entries.length} 条` : '打开历史记录'}
       >
         <span className="history-trigger-label">历史</span>
@@ -76,10 +89,16 @@ export function HistoryPanel({
       </button>
 
       {open && (
-        <div className="history-popover" role="dialog" aria-label="最近输入历史">
+        <div
+          id="history-popover"
+          className="history-popover"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby={titleId}
+        >
           <div className="history-head">
             <div className="history-title-wrap">
-              <span className="history-title">Recent</span>
+              <span className="history-title" id={titleId}>Recent</span>
               <span className="history-meta">
                 {entries.length > 0 ? `${entries.length} 条` : '本地历史'}
               </span>
@@ -95,6 +114,7 @@ export function HistoryPanel({
               </button>
               <button
                 type="button"
+                ref={closeButtonRef}
                 className="history-close"
                 onClick={() => setOpen(false)}
                 aria-label="关闭历史记录"
