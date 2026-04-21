@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { HistoryPanel } from './components/HistoryPanel';
 import { Toolbar } from './components/Toolbar';
 import { JsonTree } from './components/JsonTree';
 import { ValuePopup } from './components/ValuePopup';
@@ -7,13 +8,25 @@ import {
   tryParseJson,
   type SearchScope,
 } from './utils/jsonUtils';
+import {
+  HISTORY_STORAGE_KEY,
+  clearHistory,
+  loadHistory,
+  removeHistoryEntry,
+  saveHistoryEntry,
+  type HistoryEntry,
+} from './utils/historyStore';
 
 const SPLIT_MIN = 20;
 const SPLIT_MAX = 80;
 const SPLIT_DEFAULT = 44;
+const HISTORY_SAVE_DELAY = 600;
 
 export default function App() {
   const [input, setInput] = useState('');
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>(() =>
+    loadHistory()
+  );
   const [expandLevel, setExpandLevel] = useState(2);
   const [popup, setPopup] = useState<{ text: string; title?: string } | null>(
     null
@@ -41,6 +54,29 @@ export default function App() {
   useEffect(() => {
     setCurrentMatchIndex(0);
   }, [matches]);
+
+  useEffect(() => {
+    if (!input.trim()) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setHistoryEntries(saveHistoryEntry(input));
+    }, HISTORY_SAVE_DELAY);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [input]);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === HISTORY_STORAGE_KEY) {
+        setHistoryEntries(loadHistory());
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const matchCount = matches.length;
   const hasQuery = searchQuery.trim().length > 0;
@@ -130,6 +166,13 @@ export default function App() {
             <span className="panel-label-rule" aria-hidden />
           </div>
           <Toolbar input={input} setInput={setInput} />
+          <HistoryPanel
+            entries={historyEntries}
+            activeContent={input}
+            onRestore={(entry) => setInput(entry.content)}
+            onRemove={(id) => setHistoryEntries(removeHistoryEntry(id))}
+            onClear={() => setHistoryEntries(clearHistory())}
+          />
           <textarea
             className="input-area"
             value={input}

@@ -179,6 +179,20 @@ body {
   .panel-rule::after {
     display: none !important;
   }
+
+  .history-item {
+    grid-template-columns: 1fr;
+  }
+
+  .history-actions {
+    justify-content: flex-start;
+  }
+
+  .history-popover {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
 }
 
 .panel-rule {
@@ -416,6 +430,260 @@ body {
   font-size: 12px;
   margin-top: 6px;
   font-family: var(--mono);
+}
+
+/* ─────────────────────────── history ─────────────────────────── */
+
+.history-panel {
+  position: relative;
+  height: 0;
+  z-index: 20;
+}
+
+.history-trigger {
+  position: absolute;
+  top: -8px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--rule);
+  background: rgba(251, 248, 240, 0.94);
+  color: var(--ink-muted);
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 12px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: color 0.15s ease, border-color 0.15s ease,
+    background 0.15s ease, transform 0.15s ease;
+}
+
+.history-trigger:hover,
+.history-trigger.is-open {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(240, 215, 210, 0.92);
+}
+
+.history-trigger.is-open {
+  transform: translateY(1px);
+}
+
+.history-trigger-label {
+  letter-spacing: 0.02em;
+}
+
+.history-trigger-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.history-popover {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  width: min(520px, calc(100vw - 72px));
+  max-height: min(360px, 48vh);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: rgba(244, 239, 227, 0.98);
+  box-shadow: 12px 12px 0 rgba(26, 26, 36, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-title-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.history-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.history-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.history-clear {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+}
+
+.history-clear::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.18s ease;
+}
+
+.history-clear:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.history-clear:hover:not(:disabled)::after {
+  transform: scaleX(1);
+}
+
+.history-clear:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+.history-close {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-muted);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.history-close:hover {
+  color: var(--accent);
+}
+
+.history-empty {
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: #fbf8f0;
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: #fbf8f0;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.history-item:hover {
+  border-color: var(--ink-faint);
+}
+
+.history-item.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.history-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+}
+
+.history-summary {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.history-item-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+
+.history-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-btn {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--ink-muted);
+  border: 1px solid transparent;
+  background: var(--paper-2);
+  border-radius: 1px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.history-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--paper);
 }
 
 /* ─────────────────────────── tree toolbar ─────────────────────────── */
