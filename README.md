@@ -12,6 +12,8 @@ Live demo: <https://json.herf.cc>
   levels (1–5 / all).
 - **Escape toolkit** on the raw input: escape, unescape, Unicode ⇄ Chinese,
   one-click unwrap of fully-escaped JSON strings.
+- **Recent history** for the source pane: auto-saved snapshots in local
+  browser storage, with restore, single-delete, and clear-all actions.
 - **Recursive tree viewer** with per-node expand override.
 - **Nested JSON parsing** — a string value that itself holds JSON can be
   expanded as a sub-tree on demand.
@@ -30,8 +32,20 @@ Vite 5 · React 18 · TypeScript 5 · Nginx 1.27 (runtime).
 pnpm install
 pnpm dev       # http://localhost:5173
 pnpm build     # type-check + production bundle into dist/
+pnpm test      # history storage tests via Node's built-in runner
 pnpm preview   # serve the built bundle
 ```
+
+## History
+
+The source pane keeps a recent-history list in `localStorage` under a versioned
+key. Snapshots are saved automatically after input changes, deduplicated by
+content, and capped to the latest 20 entries.
+
+- History lives only in the current browser profile.
+- Clearing the editor does not delete saved history.
+- Use the history panel to restore an entry, remove one item, or clear the
+  entire list.
 
 ## Docker
 
