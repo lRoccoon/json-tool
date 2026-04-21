@@ -4,6 +4,7 @@ import { JsonTree } from './components/JsonTree';
 import { ValuePopup } from './components/ValuePopup';
 import {
   collectMatches,
+  deleteJsonAtPath,
   tryParseJson,
   type SearchScope,
 } from './utils/jsonUtils';
@@ -75,6 +76,19 @@ export default function App() {
     '--split-left': `${splitPct}fr`,
     '--split-right': `${100 - splitPct}fr`,
   } as CSSProperties;
+
+  const handleDeletePath = (path: string) => {
+    if (!parsed.ok || !path) {
+      return;
+    }
+
+    const nextValue = deleteJsonAtPath(parsed.value, path);
+    if (nextValue === parsed.value) {
+      return;
+    }
+
+    setInput(JSON.stringify(nextValue, null, 2));
+  };
 
   return (
     <div className="app">
@@ -315,6 +329,7 @@ export default function App() {
                 value={parsed.value}
                 expandLevel={expandLevel}
                 onOpenValue={(text, title) => setPopup({ text, title })}
+                onDeletePath={handleDeletePath}
                 searchQuery={searchQuery.trim()}
                 searchScope={searchScope}
                 searchMatches={matches}

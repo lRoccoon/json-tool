@@ -141,6 +141,10 @@ export function sortObjectEntries<T>(
   return mode === 'asc' ? sorted : sorted.reverse();
 }
 
+export function encodeJsonPathSegment(segment: string | number): string {
+  return String(segment).replace(/~/g, '~0').replace(/\//g, '~1');
+}
+
 export function collectMatches(
   value: unknown,
   scope: SearchScope,
@@ -189,7 +193,9 @@ export function collectMatches(
 
     if (Array.isArray(v)) {
       const next = stack.concat(path);
-      v.forEach((child, i) => walk(child, `${path}/${i}`, i, next));
+      v.forEach((child, i) =>
+        walk(child, `${path}/${encodeJsonPathSegment(i)}`, i, next)
+      );
     } else if (v !== null && typeof v === 'object') {
       const next = stack.concat(path);
       const entries = sortObjectEntries(
@@ -197,13 +203,13 @@ export function collectMatches(
         sortMode
       );
       for (const [k, child] of entries) {
-        walk(child, `${path}/${k}`, k, next);
+        walk(child, `${path}/${encodeJsonPathSegment(k)}`, k, next);
       }
     } else if (nestedContainer !== null) {
       const next = stack.concat(path);
       if (Array.isArray(nestedContainer)) {
         nestedContainer.forEach((child, i) =>
-          walk(child, `${path}/${i}`, i, next)
+          walk(child, `${path}/${encodeJsonPathSegment(i)}`, i, next)
         );
       } else {
         const entries = sortObjectEntries(
@@ -211,7 +217,7 @@ export function collectMatches(
           sortMode
         );
         for (const [k, child] of entries) {
-          walk(child, `${path}/${k}`, k, next);
+          walk(child, `${path}/${encodeJsonPathSegment(k)}`, k, next);
         }
       }
     }
@@ -219,4 +225,95 @@ export function collectMatches(
 
   walk(value, '', null, []);
   return { matches, ancestors };
+}
+
+function parsePath(path: string): string[] {
+  if (!path) {
+    return [];
+  }
+
+  return path
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+}
+
+function deleteAtSegments(value: unknown, segments: string[]): unknown {
+  if (segments.length === 0) {
+    return value;
+  }
+
+  const [head, ...rest] = segments;
+
+  if (Array.isArray(value)) {
+    const index = Number(head);
+    if (!Number.isInteger(index) || index < 0 || index >= value.length) {
+      return value;
+    }
+
+    if (rest.length === 0) {
+      return value.filter((_, currentIndex) => currentIndex !== index);
+    }
+
+    const nextChild = deleteAtSegments(value[index], rest);
+    if (nextChild === value[index]) {
+      return value;
+    }
+
+    const nextArray = value.slice();
+    nextArray[index] = nextChild;
+    return nextArray;
+  }
+
+  if (value !== null && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if (!Object.prototype.hasOwnProperty.call(record, head)) {
+      return value;
+    }
+
+    if (rest.length === 0) {
+      const { [head]: _removed, ...remaining } = record;
+      return remaining;
+    }
+
+    const currentChild = record[head];
+    const nextChild = deleteAtSegments(currentChild, rest);
+    if (nextChild === currentChild) {
+      return value;
+    }
+
+    return {
+      ...record,
+      [head]: nextChild,
+    };
+  }
+
+  if (typeof value === 'string' && isLikelyJsonString(value)) {
+    const parsed = tryParseJson(value);
+    if (
+      !parsed.ok ||
+      parsed.value === null ||
+      (typeof parsed.value !== 'object' && !Array.isArray(parsed.value))
+    ) {
+      return value;
+    }
+
+    const nextNested = deleteAtSegments(parsed.value, segments);
+    if (nextNested === parsed.value) {
+      return value;
+    }
+
+    return JSON.stringify(nextNested);
+  }
+
+  return value;
+}
+
+export function deleteJsonAtPath(value: unknown, path: string): unknown {
+  const segments = parsePath(path);
+  if (segments.length === 0) {
+    return value;
+  }
+
+  return deleteAtSegments(value, segments);
 }

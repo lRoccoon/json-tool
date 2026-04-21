@@ -786,6 +786,12 @@ body {
   background: var(--paper);
   border-color: var(--accent);
 }
+.jn-act-danger {
+  color: var(--accent);
+}
+.jn-act-danger:hover {
+  background: var(--accent-soft);
+}
 
 /* ─────────────────────────── modal ─────────────────────────── */
 
