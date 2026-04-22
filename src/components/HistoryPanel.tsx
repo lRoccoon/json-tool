@@ -24,9 +24,12 @@ export function HistoryPanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const prevOpenRef = useRef(open);
   const titleId = useId();
 
   useEffect(() => {
+    if (prevOpenRef.current === open) return;
+    prevOpenRef.current = open;
     if (open) {
       closeButtonRef.current?.focus();
     } else {
@@ -75,7 +78,7 @@ export function HistoryPanel({
       <button
         type="button"
         ref={triggerRef}
-        className={`history-trigger${open ? ' is-open' : ''}`}
+        className={`btn history-trigger${open ? ' is-open' : ''}`}
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="dialog"

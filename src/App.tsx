@@ -179,14 +179,15 @@ export default function App() {
             <span className="panel-label-text">Source</span>
             <span className="panel-label-rule" aria-hidden />
           </div>
-          <Toolbar input={input} setInput={setInput} />
-          <HistoryPanel
-            entries={historyEntries}
-            activeContent={input}
-            onRestore={(entry) => setInput(entry.content)}
-            onRemove={(id) => setHistoryEntries(removeHistoryEntry(id))}
-            onClear={() => setHistoryEntries(clearHistory())}
-          />
+          <Toolbar input={input} setInput={setInput}>
+            <HistoryPanel
+              entries={historyEntries}
+              activeContent={input}
+              onRestore={(entry) => setInput(entry.content)}
+              onRemove={(id) => setHistoryEntries(removeHistoryEntry(id))}
+              onClear={() => setHistoryEntries(clearHistory())}
+            />
+          </Toolbar>
           <textarea
             className="input-area"
             value={input}
