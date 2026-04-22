@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import {
+  encodeJsonPathSegment,
   isLikelyJsonString,
   sortObjectEntries,
   tryParseJson,
@@ -16,6 +17,7 @@ export interface TreeApi {
   isUnescaped: (path: string) => boolean;
   toggleUnescaped: (path: string) => void;
   onOpenValue: (text: string, title?: string) => void;
+  onDeletePath: (path: string) => void;
   sortKeys: SortKeysMode;
   search: {
     query: string;
@@ -182,6 +184,15 @@ function ContainerNode({
         ) : null}
 
         <span className="jn-actions">
+          {path && (
+            <button
+              className="jn-act jn-act-danger"
+              onClick={() => api.onDeletePath(path)}
+              title="删除此项并同步更新原始 JSON"
+            >
+              删除
+            </button>
+          )}
           {isNestedView && (
             <button
               className="jn-act"
@@ -205,7 +216,7 @@ function ContainerNode({
                 key={String(k)}
                 value={v}
                 keyLabel={isArr ? (k as number) : (k as string)}
-                path={path + '/' + String(k)}
+                path={path + '/' + encodeJsonPathSegment(k)}
                 depth={depth + 1}
                 api={api}
                 isArrayItem={isArr}
@@ -295,6 +306,15 @@ function PrimitiveNode({ value, keyLabel, path, api }: JsonNodeProps) {
           {content}
         </span>
         <span className="jn-actions">
+          {path && (
+            <button
+              className="jn-act jn-act-danger"
+              onClick={() => api.onDeletePath(path)}
+              title="删除此项并同步更新原始 JSON"
+            >
+              删除
+            </button>
+          )}
           <button className="jn-act" onClick={copy} title="复制值">
             {copied ? '✓' : '复制'}
           </button>

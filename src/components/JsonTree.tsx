@@ -6,6 +6,7 @@ interface JsonTreeProps {
   value: unknown;
   expandLevel: number;
   onOpenValue: (text: string, title?: string) => void;
+  onDeletePath: (path: string) => void;
   searchQuery: string;
   searchScope: SearchScope;
   searchMatches: string[];
@@ -18,6 +19,7 @@ export function JsonTree({
   value,
   expandLevel,
   onOpenValue,
+  onDeletePath,
   searchQuery,
   searchScope,
   searchMatches,
@@ -99,6 +101,7 @@ export function JsonTree({
         });
       },
       onOpenValue,
+      onDeletePath,
       sortKeys,
       search: {
         query: searchQuery,
@@ -113,6 +116,7 @@ export function JsonTree({
       unescaped,
       expandLevel,
       onOpenValue,
+      onDeletePath,
       searchAncestors,
       searchQuery,
       searchScope,
