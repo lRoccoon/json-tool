@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "node --test --experimental-strip-types src/utils/jsonUtils.test.ts"
+    "test": "node --test --experimental-strip-types src/utils/historyStore.test.ts src/utils/jsonUtils.test.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.7",
