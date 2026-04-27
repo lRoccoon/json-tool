@@ -70,8 +70,11 @@ or remove it for a standalone deploy.
 
 GitHub Actions (`.github/workflows/docker.yml`) builds the image on every push
 to `main` and on `v*` tags, then pushes multi-arch (`linux/amd64`,
-`linux/arm64`) images to `ghcr.io/<owner>/json-tool` with tags `latest`,
-`sha-<short>`, and the semver tag when applicable.
+`linux/arm64`) images to `ghcr.io/<owner>/json-tool`:
+
+- Pushes to `main` publish `dev` and `sha-<short>`.
+- Pushes of a `v*` tag publish `latest`, the semver tag (e.g. `0.4.0`, `0.4`),
+  and `sha-<short>`.
 
 ## License
 
