@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { HistoryPanel } from './components/HistoryPanel';
+import { SharePanel } from './components/SharePanel';
 import { Toolbar } from './components/Toolbar';
 import { JsonTree } from './components/JsonTree';
 import { ValuePopup } from './components/ValuePopup';
@@ -17,6 +18,7 @@ import {
   saveHistoryEntry,
   type HistoryEntry,
 } from './utils/historyStore';
+import { fetchSharedContent, parseShareHash } from './utils/transferShare';
 
 const SPLIT_MIN = 20;
 const SPLIT_MAX = 80;
@@ -40,6 +42,8 @@ export default function App() {
   const [searchScope, setSearchScope] = useState<SearchScope>('all');
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [sortKeys, setSortKeys] = useState<'none' | 'asc' | 'desc'>('none');
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareLoadError, setShareLoadError] = useState<string | null>(null);
 
   const parsed = useMemo(() => tryParseJson(input), [input]);
   const hasInput = input.trim().length > 0;
@@ -77,6 +81,32 @@ export default function App() {
 
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
+    const target = parseShareHash(window.location.hash);
+    if (!target) return;
+
+    let cancelled = false;
+    setShareLoading(true);
+    setShareLoadError(null);
+    fetchSharedContent(target)
+      .then((text) => {
+        if (cancelled) return;
+        setInput(text);
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setShareLoadError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setShareLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const matchCount = matches.length;
@@ -178,35 +208,53 @@ export default function App() {
             <span className="panel-label-num">01</span>
             <span className="panel-label-text">Source</span>
             <span className="panel-label-rule" aria-hidden />
+            <div className="panel-label-actions">
+              <SharePanel content={input} />
+              <HistoryPanel
+                entries={historyEntries}
+                activeContent={input}
+                onRestore={(entry) => setInput(entry.content)}
+                onRemove={(id) => setHistoryEntries(removeHistoryEntry(id))}
+                onClear={() => setHistoryEntries(clearHistory())}
+              />
+            </div>
           </div>
-          <Toolbar input={input} setInput={setInput}>
-            <HistoryPanel
-              entries={historyEntries}
-              activeContent={input}
-              onRestore={(entry) => setInput(entry.content)}
-              onRemove={(id) => setHistoryEntries(removeHistoryEntry(id))}
-              onClear={() => setHistoryEntries(clearHistory())}
+          <Toolbar input={input} setInput={setInput} />
+          <div className="input-area-wrap">
+            <textarea
+              className="input-area"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={'在此粘贴 JSON 或转义后的 JSON 字符串…'}
+              spellCheck={false}
+              readOnly={shareLoading}
             />
-          </Toolbar>
-          <textarea
-            className="input-area"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={'在此粘贴 JSON 或转义后的 JSON 字符串…'}
-            spellCheck={false}
-          />
+            {shareLoading && (
+              <div className="panel-loading" role="status" aria-live="polite">
+                <span className="panel-loading-spinner" aria-hidden />
+                <span className="panel-loading-text">正在加载分享内容…</span>
+              </div>
+            )}
+          </div>
           <div className="panel-footer">
             <span className="footer-meta">
-              {input.length > 0
+              {shareLoading
+                ? '正在加载分享内容'
+                : input.length > 0
                 ? `${input.length.toLocaleString()} 字符`
                 : '等待输入'}
             </span>
-            {hasInput && !parsed.ok && (
+            {!shareLoading && shareLoadError && (
+              <span className="status status-err">
+                ✦ 分享加载失败 · {shareLoadError}
+              </span>
+            )}
+            {!shareLoading && !shareLoadError && hasInput && !parsed.ok && (
               <span className="status status-err">
                 ✦ 无法解析 · {parsed.error}
               </span>
             )}
-            {hasInput && parsed.ok && (
+            {!shareLoading && !shareLoadError && hasInput && parsed.ok && (
               <span className="status status-ok">✓ 有效 JSON</span>
             )}
           </div>
