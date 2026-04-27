@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import {
   chineseToUnicode,
   compressJson,
@@ -11,10 +11,9 @@ import {
 interface ToolbarProps {
   input: string;
   setInput: (v: string) => void;
-  children?: ReactNode;
 }
 
-export function Toolbar({ input, setInput, children }: ToolbarProps) {
+export function Toolbar({ input, setInput }: ToolbarProps) {
   const [indent, setIndent] = useState(2);
   const [err, setErr] = useState<string | null>(null);
 
@@ -112,7 +111,6 @@ export function Toolbar({ input, setInput, children }: ToolbarProps) {
         >
           清空
         </button>
-        {children}
       </div>
 
       {err && <div className="toolbar-err">错误：{err}</div>}
