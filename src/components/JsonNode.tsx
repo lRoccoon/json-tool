@@ -19,6 +19,7 @@ export interface TreeApi {
   onOpenValue: (text: string, title?: string) => void;
   onDeletePath: (path: string) => void;
   sortKeys: SortKeysMode;
+  expandLong: boolean;
   search: {
     query: string;
     scope: SearchScope;
@@ -271,7 +272,8 @@ function PrimitiveNode({ value, keyLabel, path, api }: JsonNodeProps) {
   }
 
   const looksLikeJson = isString && isLikelyJsonString(strValue);
-  const isLong = isString && strValue.length > LONG_VALUE_THRESHOLD;
+  const isLong =
+    isString && !api.expandLong && strValue.length > LONG_VALUE_THRESHOLD;
   const hasEscape = isString && /\\["'\\/bfnrt]|\\u[0-9a-fA-F]{4}/.test(strValue);
 
   const hasValueMatch =

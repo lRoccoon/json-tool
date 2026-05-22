@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { unescapeString } from '../utils/jsonUtils';
+import { renderMarkdown } from '../utils/markdown';
 
 interface ValuePopupProps {
   text: string;
@@ -10,9 +11,14 @@ interface ValuePopupProps {
 export function ValuePopup({ text, title, onClose }: ValuePopupProps) {
   const [wrap, setWrap] = useState(true);
   const [unesc, setUnesc] = useState(false);
+  const [md, setMd] = useState(true);
   const [copied, setCopied] = useState(false);
 
   const displayed = unesc ? unescapeString(text) : text;
+  const rendered = useMemo(
+    () => (md ? renderMarkdown(displayed) : null),
+    [md, displayed]
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -46,7 +52,16 @@ export function ValuePopup({ text, title, onClose }: ValuePopupProps) {
           <label className="modal-check">
             <input
               type="checkbox"
+              checked={md}
+              onChange={(e) => setMd(e.target.checked)}
+            />
+            Markdown
+          </label>
+          <label className={`modal-check${md ? ' is-disabled' : ''}`}>
+            <input
+              type="checkbox"
               checked={wrap}
+              disabled={md}
               onChange={(e) => setWrap(e.target.checked)}
             />
             自动换行
@@ -66,9 +81,13 @@ export function ValuePopup({ text, title, onClose }: ValuePopupProps) {
             关闭
           </button>
         </div>
-        <pre className={`modal-body ${wrap ? 'wrap' : 'nowrap'}`}>
-          {displayed}
-        </pre>
+        {md ? (
+          <div className="modal-body modal-body-md">{rendered}</div>
+        ) : (
+          <pre className={`modal-body ${wrap ? 'wrap' : 'nowrap'}`}>
+            {displayed}
+          </pre>
+        )}
       </div>
     </div>
   );
