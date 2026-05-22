@@ -1,0 +1,5 @@
+# pnpm settings (the new home for the former package.json "pnpm" field).
+# esbuild needs its install script to fetch the platform binary; without
+# this, pnpm 10 fails the CI install with ERR_PNPM_IGNORED_BUILDS.
+onlyBuiltDependencies:
+  - esbuild
