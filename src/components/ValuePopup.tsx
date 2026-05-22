@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { unescapeString } from '../utils/jsonUtils';
-import { renderMarkdown } from '../utils/markdown';
+import { MarkdownView } from '../utils/markdown';
 
 interface ValuePopupProps {
   text: string;
@@ -15,10 +15,6 @@ export function ValuePopup({ text, title, onClose }: ValuePopupProps) {
   const [copied, setCopied] = useState(false);
 
   const displayed = unesc ? unescapeString(text) : text;
-  const rendered = useMemo(
-    () => (md ? renderMarkdown(displayed) : null),
-    [md, displayed]
-  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -82,7 +78,9 @@ export function ValuePopup({ text, title, onClose }: ValuePopupProps) {
           </button>
         </div>
         {md ? (
-          <div className="modal-body modal-body-md">{rendered}</div>
+          <div className="modal-body modal-body-md">
+            <MarkdownView text={displayed} />
+          </div>
         ) : (
           <pre className={`modal-body ${wrap ? 'wrap' : 'nowrap'}`}>
             {displayed}
