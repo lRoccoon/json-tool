@@ -42,6 +42,7 @@ export default function App() {
   const [searchScope, setSearchScope] = useState<SearchScope>('all');
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [sortKeys, setSortKeys] = useState<'none' | 'asc' | 'desc'>('none');
+  const [expandLong, setExpandLong] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareLoadError, setShareLoadError] = useState<string | null>(null);
 
@@ -345,6 +346,14 @@ export default function App() {
                 ? 'Key A→Z'
                 : 'Key Z→A'}
             </button>
+            <button
+              className={`tbtn${expandLong ? ' is-active' : ''}`}
+              disabled={!parsed.ok}
+              onClick={() => setExpandLong((v) => !v)}
+              title="完整展示长字符串，不再省略为单行"
+            >
+              {expandLong ? '长文本：展开' : '长文本：省略'}
+            </button>
           </div>
           <div className="tree-search">
             <input
@@ -428,6 +437,7 @@ export default function App() {
                 searchAncestors={ancestors}
                 searchCurrentIndex={currentMatchIndex}
                 sortKeys={sortKeys}
+                expandLong={expandLong}
               />
             ) : hasInput ? (
               <div className="tree-empty error">

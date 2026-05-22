@@ -13,6 +13,7 @@ interface JsonTreeProps {
   searchAncestors: Set<string>;
   searchCurrentIndex: number;
   sortKeys: SortKeysMode;
+  expandLong: boolean;
 }
 
 export function JsonTree({
@@ -26,6 +27,7 @@ export function JsonTree({
   searchAncestors,
   searchCurrentIndex,
   sortKeys,
+  expandLong,
 }: JsonTreeProps) {
   const [expandedOverride, setExpandedOverride] = useState<
     Map<string, boolean>
@@ -103,6 +105,7 @@ export function JsonTree({
       onOpenValue,
       onDeletePath,
       sortKeys,
+      expandLong,
       search: {
         query: searchQuery,
         scope: searchScope,
@@ -123,6 +126,7 @@ export function JsonTree({
       currentPath,
       registerNode,
       sortKeys,
+      expandLong,
     ]
   );
 
