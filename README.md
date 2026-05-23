@@ -6,6 +6,29 @@ ships as a single Docker image.
 
 Live demo: <https://json.herf.cc>
 
+## Repo Map
+
+Code is the source of truth; the documents below give navigation and the
+principles that the code alone can't carry.
+
+- [`AGENTS.md`](./AGENTS.md) — collaboration entry point, required reading order
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — stable layers and boundary rules
+- [`DESIGN.md`](./DESIGN.md) — design principles and long-term constraints
+- [`PRODUCT_SENSE.md`](./PRODUCT_SENSE.md) — target users, scenarios, value calls
+- [`FRONTEND.md`](./FRONTEND.md) — frontend design language and constraints
+- [`RELIABILITY.md`](./RELIABILITY.md) — failure modes, degradation, recovery
+- [`SECURITY.md`](./SECURITY.md) — trust boundaries and data handling
+- [`QUALITY_SCORE.md`](./QUALITY_SCORE.md) — quality dimensions and delivery bar
+- [`CHANGELOG.md`](./CHANGELOG.md) — what already changed and why
+- [`docs/design-docs/`](./docs/design-docs/) — long-form design themes
+- [`docs/product-specs/`](./docs/product-specs/) — user-facing capabilities
+- [`docs/references/`](./docs/references/) — external specs and references
+- [`docs/generated/`](./docs/generated/) — generated artifacts
+- [`rules/`](./rules/) — commit, validation, doc-update, compatibility rules
+- [`src/`](./src/) — `App.tsx` entry, `components/` UI, `utils/` pure logic
+- `Dockerfile` · `nginx.conf` · `docker-compose.yml` — runtime
+- `.github/workflows/` — CI (multi-arch image build)
+
 ## Features
 
 - **Format / compress** arbitrarily large JSON with batch-adjustable expand
