@@ -1,9 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
 import { DiffTree } from './DiffTree';
-import { diffJson, summarizeDiff, type DiffNode } from '../utils/jsonDiff';
+import {
+  diffJson,
+  numberEqualsWithPrecision,
+  summarizeDiff,
+  type DiffNode,
+} from '../utils/jsonDiff';
 import { tryParseJson, type JsonValue } from '../utils/jsonUtils';
 
 const EXPAND_OPTIONS = [1, 2, 3, 4, 5, 99] as const;
+const PRECISION_OPTIONS = [0, 1, 2, 3, 4, 6, 8] as const;
 
 export function JsonDiff() {
   const [inputA, setInputA] = useState('');
@@ -12,6 +18,7 @@ export function JsonDiff() {
   const [parsedPaths, setParsedPaths] = useState<Set<string>>(new Set());
   const [onlyDiff, setOnlyDiff] = useState(false);
   const [expandLevel, setExpandLevel] = useState(99);
+  const [precision, setPrecision] = useState<number | null>(null);
 
   const parsedA = useMemo(() => tryParseJson(inputA), [inputA]);
   const parsedB = useMemo(() => tryParseJson(inputB), [inputB]);
@@ -22,12 +29,18 @@ export function JsonDiff() {
     [parseAll, parsedPaths]
   );
 
+  const numberEquals = useMemo(
+    () => (precision === null ? undefined : numberEqualsWithPrecision(precision)),
+    [precision]
+  );
+
   const diff = useMemo<DiffNode | null>(() => {
     if (!parsedA.ok || !parsedB.ok) return null;
     return diffJson(parsedA.value as JsonValue, parsedB.value as JsonValue, {
       shouldParseNested,
+      numberEquals,
     });
-  }, [parsedA, parsedB, shouldParseNested]);
+  }, [parsedA, parsedB, shouldParseNested, numberEquals]);
 
   const summary = useMemo(() => (diff ? summarizeDiff(diff) : null), [diff]);
   const identical =
@@ -110,6 +123,26 @@ export function JsonDiff() {
               {EXPAND_OPTIONS.map((lv) => (
                 <option key={lv} value={lv}>
                   {lv === 99 ? '全部' : `${lv} 级`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="tree-toolbar-item">
+            <span className="tree-toolbar-label">数字精度</span>
+            <select
+              value={precision === null ? 'exact' : String(precision)}
+              disabled={!bothOk}
+              onChange={(e) =>
+                setPrecision(
+                  e.target.value === 'exact' ? null : Number(e.target.value)
+                )
+              }
+              title="数字四舍五入到小数点后 N 位再比较，忽略更小的差异"
+            >
+              <option value="exact">精确</option>
+              {PRECISION_OPTIONS.map((p) => (
+                <option key={p} value={p}>
+                  {p} 位
                 </option>
               ))}
             </select>

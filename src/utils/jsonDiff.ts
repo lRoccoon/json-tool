@@ -25,6 +25,22 @@ export interface DiffNode {
 
 export interface DiffOptions {
   shouldParseNested: (path: string) => boolean;
+  // 自定义数字相等判定（用于按精度忽略微小差异）。省略时按 === 精确比较。
+  numberEquals?: (a: number, b: number) => boolean;
+}
+
+/**
+ * 构造一个「比较到小数点后 decimals 位（四舍五入）」的数字相等判定。
+ * 例：decimals=3 时 3.14159 与 3.14162 都视为 3.142 → 相等。
+ */
+export function numberEqualsWithPrecision(
+  decimals: number
+): (a: number, b: number) => boolean {
+  const d = Math.max(0, Math.min(100, Math.trunc(decimals)));
+  return (a, b) => {
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return a === b;
+    return a.toFixed(d) === b.toFixed(d);
+  };
 }
 
 function isContainer(v: JsonValue): boolean {
@@ -78,7 +94,12 @@ function diffValue(
 
   // 走到这里只剩混合类型（数组 vs 对象 / 容器 vs 基础值）或两个基础值。
   // 两个不同的对象/数组引用 === 永远为 false，所以混合类型自然落入 'changed'。
-  return { key, path, status: left === right ? 'unchanged' : 'changed', left, right };
+  // 两侧都是数字时，可用自定义判定（按精度忽略微小差异），否则按 === 比较。
+  const equal =
+    typeof left === 'number' && typeof right === 'number' && options.numberEquals
+      ? options.numberEquals(left, right)
+      : left === right;
+  return { key, path, status: equal ? 'unchanged' : 'changed', left, right };
 }
 
 function diffObject(

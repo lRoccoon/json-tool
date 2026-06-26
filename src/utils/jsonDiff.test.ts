@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { diffChars, diffJson, summarizeDiff, type DiffNode } from './jsonDiff.ts';
+import {
+  diffChars,
+  diffJson,
+  numberEqualsWithPrecision,
+  summarizeDiff,
+  type DiffNode,
+} from './jsonDiff.ts';
 
 const noNested = { shouldParseNested: () => false };
 const allNested = { shouldParseNested: () => true };
@@ -127,4 +133,33 @@ test('diffChars 处理中间插入', () => {
     { type: 'add', value: 'b' },
     { type: 'equal', value: 'c' },
   ]);
+});
+
+test('numberEqualsWithPrecision 按小数位四舍五入判等', () => {
+  const eq3 = numberEqualsWithPrecision(3);
+  assert.equal(eq3(3.14159, 3.14162), true); // 都是 3.142
+  assert.equal(eq3(3.14159, 3.14252), false); // 3.142 vs 3.143
+  const eq0 = numberEqualsWithPrecision(0);
+  assert.equal(eq0(1.4, 1.49), true); // 都是 1
+  assert.equal(eq0(1.4, 1.6), false); // 1 vs 2
+});
+
+test('diffJson 在数字精度内将微小差异判为 unchanged', () => {
+  const a = { v: 3.14159, n: 100 };
+  const b = { v: 3.14162, n: 100 };
+  // 精确比较：v 改变
+  assert.equal(child(diffJson(a, b, noNested), 'v').status, 'changed');
+  // 3 位精度：v 在精度内 → unchanged
+  const within = diffJson(a, b, {
+    shouldParseNested: () => false,
+    numberEquals: numberEqualsWithPrecision(3),
+  });
+  assert.equal(child(within, 'v').status, 'unchanged');
+  assert.equal(child(within, 'n').status, 'unchanged');
+  // 5 位精度：差异超出精度 → changed
+  const beyond = diffJson(a, b, {
+    shouldParseNested: () => false,
+    numberEquals: numberEqualsWithPrecision(5),
+  });
+  assert.equal(child(beyond, 'v').status, 'changed');
 });
