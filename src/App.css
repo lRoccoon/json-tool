@@ -1783,6 +1783,8 @@ body {
   --diff-add-line: var(--ok);
   --diff-del-bg: rgba(184, 69, 60, 0.12);
   --diff-del-line: var(--accent);
+  --diff-token-add: rgba(61, 107, 69, 0.28);
+  --diff-token-del: rgba(184, 69, 60, 0.28);
 }
 
 /* ─────────────────────────── diff layout ─────────────────────────── */
@@ -1883,6 +1885,18 @@ body {
 }
 .diff-scalar {
   color: var(--ink-2);
+}
+.diff-tok-del,
+.diff-tok-add {
+  border-radius: 2px;
+  padding: 0 1px;
+  font-weight: 600;
+}
+.diff-tok-del {
+  background: var(--diff-token-del);
+}
+.diff-tok-add {
+  background: var(--diff-token-add);
 }
 .diff-punct,
 .diff-summary {

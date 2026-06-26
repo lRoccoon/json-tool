@@ -189,3 +189,71 @@ export function summarizeDiff(root: DiffNode): DiffSummary {
   walk(root);
   return { added, removed, changed };
 }
+
+export type CharSegmentType = 'equal' | 'del' | 'add';
+
+export interface CharSegment {
+  type: CharSegmentType;
+  value: string;
+}
+
+// 超过该长度（两侧之一）则跳过字符级 diff，避免 O(n*m) 退化。
+const CHAR_DIFF_LIMIT = 2000;
+
+/**
+ * 对两个字符串做字符级 diff（最长公共子序列），返回有序的片段列表：
+ * - `equal` 两侧都有；`del` 仅左侧（A）有；`add` 仅右侧（B）有。
+ * 左侧渲染 equal+del，右侧渲染 equal+add，即可逐字符高亮变化。
+ * 任一侧过长时退化为「整体 del + 整体 add」，避免性能问题。
+ */
+export function diffChars(a: string, b: string): CharSegment[] {
+  if (a === b) return a ? [{ type: 'equal', value: a }] : [];
+
+  const n = a.length;
+  const m = b.length;
+
+  const segs: CharSegment[] = [];
+  const push = (type: CharSegmentType, ch: string) => {
+    const last = segs[segs.length - 1];
+    if (last && last.type === type) last.value += ch;
+    else segs.push({ type, value: ch });
+  };
+
+  if (n > CHAR_DIFF_LIMIT || m > CHAR_DIFF_LIMIT) {
+    if (a) push('del', a);
+    if (b) push('add', b);
+    return segs;
+  }
+
+  // dp[i][j] = LCS 长度（a[i:] 与 b[j:]）
+  const dp: number[][] = Array.from({ length: n + 1 }, () =>
+    new Array<number>(m + 1).fill(0)
+  );
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] =
+        a[i] === b[j]
+          ? dp[i + 1][j + 1] + 1
+          : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) {
+      push('equal', a[i]);
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      push('del', a[i]);
+      i++;
+    } else {
+      push('add', b[j]);
+      j++;
+    }
+  }
+  while (i < n) push('del', a[i++]);
+  while (j < m) push('add', b[j++]);
+  return segs;
+}

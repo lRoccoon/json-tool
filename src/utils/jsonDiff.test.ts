@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { diffJson, summarizeDiff, type DiffNode } from './jsonDiff.ts';
+import { diffChars, diffJson, summarizeDiff, type DiffNode } from './jsonDiff.ts';
 
 const noNested = { shouldParseNested: () => false };
 const allNested = { shouldParseNested: () => true };
@@ -98,4 +98,33 @@ test('diffJson 解析后同内容的不同格式 JSON 字符串判为 unchanged 
 test('summarizeDiff 不计入 children 容器本身，只计叶子', () => {
   const d = diffJson({ a: { b: 1 }, c: 1 }, { a: { b: 2 }, c: 1 }, noNested);
   assert.deepEqual(summarizeDiff(d), { added: 0, removed: 0, changed: 1 });
+});
+
+test('diffChars 相同字符串只产出一个 equal 片段', () => {
+  assert.deepEqual(diffChars('abc', 'abc'), [{ type: 'equal', value: 'abc' }]);
+});
+
+test('diffChars 标出公共前缀后变化的字符', () => {
+  // "100" → "200"：公共子序列 "00"，仅首字符不同
+  assert.deepEqual(diffChars('100', '200'), [
+    { type: 'del', value: '1' },
+    { type: 'add', value: '2' },
+    { type: 'equal', value: '00' },
+  ]);
+});
+
+test('diffChars 无公共字符时整体 del + 整体 add', () => {
+  assert.deepEqual(diffChars('18', '20'), [
+    { type: 'del', value: '18' },
+    { type: 'add', value: '20' },
+  ]);
+});
+
+test('diffChars 处理中间插入', () => {
+  // "ac" → "abc"：插入 b
+  assert.deepEqual(diffChars('ac', 'abc'), [
+    { type: 'equal', value: 'a' },
+    { type: 'add', value: 'b' },
+    { type: 'equal', value: 'c' },
+  ]);
 });
