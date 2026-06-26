@@ -1870,6 +1870,13 @@ body {
   width: 9px;
   flex: none;
   color: var(--ink-faint);
+  font-weight: 600;
+}
+.diff-cell.is-del .diff-gutter {
+  color: var(--diff-del-line);
+}
+.diff-cell.is-add .diff-gutter {
+  color: var(--diff-add-line);
 }
 .diff-key {
   color: var(--cool);
