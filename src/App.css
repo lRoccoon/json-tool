@@ -1735,3 +1735,32 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ─────────────────────────── view nav ─────────────────────────── */
+.app-nav {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-right: 6px;
+}
+.app-nav-tab {
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 4px 12px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.app-nav-tab:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+.app-nav-tab.is-active {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}

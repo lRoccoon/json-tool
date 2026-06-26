@@ -1,160 +1,35 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { HistoryPanel } from './components/HistoryPanel';
-import { SharePanel } from './components/SharePanel';
-import { Toolbar } from './components/Toolbar';
-import { JsonTree } from './components/JsonTree';
-import { ValuePopup } from './components/ValuePopup';
-import {
-  collectMatches,
-  deleteJsonAtPath,
-  tryParseJson,
-  type SearchScope,
-} from './utils/jsonUtils';
-import {
-  HISTORY_STORAGE_KEY,
-  clearHistory,
-  loadHistory,
-  removeHistoryEntry,
-  saveHistoryEntry,
-  type HistoryEntry,
-} from './utils/historyStore';
-import { fetchSharedContent, parseShareHash } from './utils/transferShare';
+import { useEffect, useState } from 'react';
+import { FormatTool } from './components/FormatTool';
+import { JsonDiff } from './components/JsonDiff';
 
-const SPLIT_MIN = 20;
-const SPLIT_MAX = 80;
-const SPLIT_DEFAULT = 44;
-const HISTORY_SAVE_DELAY = 600;
+type View = 'format' | 'diff';
+
+function viewFromHash(): View {
+  return window.location.hash.replace(/^#/, '').split('&')[0] === 'diff'
+    ? 'diff'
+    : 'format';
+}
 
 export default function App() {
-  const [input, setInput] = useState('');
-  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>(() =>
-    loadHistory()
-  );
-  const [expandLevel, setExpandLevel] = useState(2);
-  const [popup, setPopup] = useState<{ text: string; title?: string } | null>(
-    null
-  );
-  const [splitPct, setSplitPct] = useState(SPLIT_DEFAULT);
-  const [dragging, setDragging] = useState(false);
-  const mainRef = useRef<HTMLElement>(null);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchScope, setSearchScope] = useState<SearchScope>('all');
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [sortKeys, setSortKeys] = useState<'none' | 'asc' | 'desc'>('none');
-  const [expandLong, setExpandLong] = useState(false);
-  const [shareLoading, setShareLoading] = useState(false);
-  const [shareLoadError, setShareLoadError] = useState<string | null>(null);
-
-  const parsed = useMemo(() => tryParseJson(input), [input]);
-  const hasInput = input.trim().length > 0;
-
-  const { matches, ancestors } = useMemo(
-    () =>
-      parsed.ok
-        ? collectMatches(parsed.value, searchScope, searchQuery, sortKeys)
-        : { matches: [] as string[], ancestors: new Set<string>() },
-    [parsed, searchScope, searchQuery, sortKeys]
-  );
+  const [view, setView] = useState<View>(() => viewFromHash());
 
   useEffect(() => {
-    setCurrentMatchIndex(0);
-  }, [matches]);
-
-  useEffect(() => {
-    if (!input.trim()) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setHistoryEntries(saveHistoryEntry(input));
-    }, HISTORY_SAVE_DELAY);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [input]);
-
-  useEffect(() => {
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === HISTORY_STORAGE_KEY) {
-        setHistoryEntries(loadHistory());
-      }
-    };
-
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    const onHashChange = () => setView(viewFromHash());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  useEffect(() => {
-    const target = parseShareHash(window.location.hash);
-    if (!target) return;
-
-    let cancelled = false;
-    setShareLoading(true);
-    setShareLoadError(null);
-    fetchSharedContent(target)
-      .then((text) => {
-        if (cancelled) return;
-        setInput(text);
-        history.replaceState(null, '', window.location.pathname + window.location.search);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setShareLoadError(err instanceof Error ? err.message : String(err));
-      })
-      .finally(() => {
-        if (!cancelled) setShareLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const matchCount = matches.length;
-  const hasQuery = searchQuery.trim().length > 0;
-  const goPrev = () =>
-    matchCount &&
-    setCurrentMatchIndex((i) => (i - 1 + matchCount) % matchCount);
-  const goNext = () =>
-    matchCount && setCurrentMatchIndex((i) => (i + 1) % matchCount);
-
-  const onRulePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragging(true);
-  };
-  const onRulePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-    const rect = mainRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const pct = ((e.clientX - rect.left) / rect.width) * 100;
-    setSplitPct(Math.max(SPLIT_MIN, Math.min(SPLIT_MAX, pct)));
-  };
-  const onRulePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
+  const goTo = (next: View) => {
+    if (next === 'diff') {
+      window.location.hash = 'diff';
+    } else if (viewFromHash() === 'diff') {
+      history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search
+      );
+      setView('format');
     }
-    setDragging(false);
-  };
-  const onRuleDoubleClick = () => setSplitPct(SPLIT_DEFAULT);
-
-  const mainStyle = {
-    '--split-left': `${splitPct}fr`,
-    '--split-right': `${100 - splitPct}fr`,
-  } as CSSProperties;
-
-  const handleDeletePath = (path: string) => {
-    if (!parsed.ok || !path) {
-      return;
-    }
-
-    const nextValue = deleteJsonAtPath(parsed.value, path);
-    if (nextValue === parsed.value) {
-      return;
-    }
-
-    setInput(JSON.stringify(nextValue, null, 2));
   };
 
   return (
@@ -171,13 +46,22 @@ export default function App() {
           </p>
         </div>
         <div className="app-header-col app-header-meta">
-          <span className="tag">格式化</span>
-          <span className="tag-sep">/</span>
-          <span className="tag">压缩</span>
-          <span className="tag-sep">/</span>
-          <span className="tag">转义</span>
-          <span className="tag-sep">/</span>
-          <span className="tag">嵌套解析</span>
+          <nav className="app-nav" aria-label="视图切换">
+            <button
+              type="button"
+              className={`app-nav-tab${view === 'format' ? ' is-active' : ''}`}
+              onClick={() => goTo('format')}
+            >
+              格式化
+            </button>
+            <button
+              type="button"
+              className={`app-nav-tab${view === 'diff' ? ' is-active' : ''}`}
+              onClick={() => goTo('diff')}
+            >
+              比较
+            </button>
+          </nav>
           <span className="tag-sep">·</span>
           <a
             className="tag tag-link"
@@ -203,266 +87,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="app-main" ref={mainRef} style={mainStyle}>
-        <section className="panel panel-input">
-          <div className="panel-label">
-            <span className="panel-label-num">01</span>
-            <span className="panel-label-text">Source</span>
-            <span className="panel-label-rule" aria-hidden />
-            <div className="panel-label-actions">
-              <SharePanel content={input} />
-              <HistoryPanel
-                entries={historyEntries}
-                activeContent={input}
-                onRestore={(entry) => setInput(entry.content)}
-                onRemove={(id) => setHistoryEntries(removeHistoryEntry(id))}
-                onClear={() => setHistoryEntries(clearHistory())}
-              />
-            </div>
-          </div>
-          <Toolbar input={input} setInput={setInput} />
-          <div className="input-area-wrap">
-            <textarea
-              className="input-area"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={'在此粘贴 JSON 或转义后的 JSON 字符串…'}
-              spellCheck={false}
-              readOnly={shareLoading}
-            />
-            {shareLoading && (
-              <div className="panel-loading" role="status" aria-live="polite">
-                <span className="panel-loading-spinner" aria-hidden />
-                <span className="panel-loading-text">正在加载分享内容…</span>
-              </div>
-            )}
-          </div>
-          <div className="panel-footer">
-            <span className="footer-meta">
-              {shareLoading
-                ? '正在加载分享内容'
-                : input.length > 0
-                ? `${input.length.toLocaleString()} 字符`
-                : '等待输入'}
-            </span>
-            {!shareLoading && shareLoadError && (
-              <span className="status status-err">
-                ✦ 分享加载失败 · {shareLoadError}
-              </span>
-            )}
-            {!shareLoading && !shareLoadError && hasInput && !parsed.ok && (
-              <span className="status status-err">
-                ✦ 无法解析 · {parsed.error}
-              </span>
-            )}
-            {!shareLoading && !shareLoadError && hasInput && parsed.ok && (
-              <span className="status status-ok">✓ 有效 JSON</span>
-            )}
-          </div>
-        </section>
-
-        <div
-          className={`panel-rule${dragging ? ' is-dragging' : ''}`}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="调整面板宽度"
-          aria-valuenow={Math.round(splitPct)}
-          aria-valuemin={SPLIT_MIN}
-          aria-valuemax={SPLIT_MAX}
-          tabIndex={0}
-          onPointerDown={onRulePointerDown}
-          onPointerMove={onRulePointerMove}
-          onPointerUp={onRulePointerUp}
-          onPointerCancel={onRulePointerUp}
-          onDoubleClick={onRuleDoubleClick}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowLeft')
-              setSplitPct((p) => Math.max(SPLIT_MIN, p - 2));
-            else if (e.key === 'ArrowRight')
-              setSplitPct((p) => Math.min(SPLIT_MAX, p + 2));
-            else if (e.key === 'Home' || e.key === 'End')
-              setSplitPct(SPLIT_DEFAULT);
-          }}
-        />
-
-        <section className="panel panel-tree">
-          <div className="panel-label">
-            <span className="panel-label-num">02</span>
-            <span className="panel-label-text">Tree</span>
-            <span className="panel-label-rule" aria-hidden />
-          </div>
-          <div className="tree-controls">
-          <div className="tree-toolbar">
-            <label className="tree-toolbar-item">
-              <span className="tree-toolbar-label">展开</span>
-              <select
-                value={expandLevel}
-                onChange={(e) => setExpandLevel(Number(e.target.value))}
-              >
-                <option value={1}>1 级</option>
-                <option value={2}>2 级</option>
-                <option value={3}>3 级</option>
-                <option value={4}>4 级</option>
-                <option value={5}>5 级</option>
-                <option value={99}>全部</option>
-              </select>
-            </label>
-            <span className="tree-sep" aria-hidden />
-            <button
-              className="tbtn"
-              disabled={!parsed.ok}
-              onClick={() => {
-                if (parsed.ok)
-                  navigator.clipboard.writeText(JSON.stringify(parsed.value));
-              }}
-            >
-              复制压缩
-            </button>
-            <button
-              className="tbtn"
-              disabled={!parsed.ok}
-              onClick={() => {
-                if (parsed.ok)
-                  navigator.clipboard.writeText(
-                    JSON.stringify(parsed.value, null, 2)
-                  );
-              }}
-            >
-              复制格式化
-            </button>
-            <button
-              className={`tbtn${sortKeys !== 'none' ? ' is-active' : ''}`}
-              disabled={!parsed.ok}
-              onClick={() =>
-                setSortKeys((s) =>
-                  s === 'none' ? 'asc' : s === 'asc' ? 'desc' : 'none'
-                )
-              }
-              title="按 Key 排序（仅对象，不影响数组顺序）"
-            >
-              {sortKeys === 'none'
-                ? 'Key 排序'
-                : sortKeys === 'asc'
-                ? 'Key A→Z'
-                : 'Key Z→A'}
-            </button>
-            <button
-              className={`tbtn${expandLong ? ' is-active' : ''}`}
-              disabled={!parsed.ok}
-              onClick={() => setExpandLong((v) => !v)}
-              title="完整展示长字符串，不再省略为单行"
-            >
-              {expandLong ? '长文本：展开' : '长文本：省略'}
-            </button>
-          </div>
-          <div className="tree-search">
-            <input
-              type="search"
-              className="tree-search-input"
-              placeholder="搜索 key / value…"
-              value={searchQuery}
-              disabled={!parsed.ok}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (e.shiftKey) goPrev();
-                  else goNext();
-                } else if (e.key === 'Escape') {
-                  setSearchQuery('');
-                }
-              }}
-            />
-            <div
-              className="tree-search-scope"
-              role="group"
-              aria-label="搜索范围"
-            >
-              {(['all', 'key', 'value'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={`scope-btn${searchScope === s ? ' is-active' : ''}`}
-                  onClick={() => setSearchScope(s)}
-                  disabled={!parsed.ok}
-                >
-                  {s === 'all' ? '全部' : s === 'key' ? 'Key' : 'Value'}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="tbtn tbtn-nav"
-              disabled={matchCount === 0}
-              onClick={goPrev}
-              title="上一个匹配 (Shift+Enter)"
-              aria-label="上一个匹配"
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              className="tbtn tbtn-nav"
-              disabled={matchCount === 0}
-              onClick={goNext}
-              title="下一个匹配 (Enter)"
-              aria-label="下一个匹配"
-            >
-              ↓
-            </button>
-            <span
-              className={`tree-search-count${
-                hasQuery && matchCount === 0 ? ' is-empty' : ''
-              }`}
-              aria-live="polite"
-            >
-              {!hasQuery
-                ? ''
-                : matchCount === 0
-                ? '无匹配'
-                : `${currentMatchIndex + 1} / ${matchCount}`}
-            </span>
-          </div>
-          </div>
-          <div className="tree-body">
-            {parsed.ok ? (
-              <JsonTree
-                value={parsed.value}
-                expandLevel={expandLevel}
-                onOpenValue={(text, title) => setPopup({ text, title })}
-                onDeletePath={handleDeletePath}
-                searchQuery={searchQuery.trim()}
-                searchScope={searchScope}
-                searchMatches={matches}
-                searchAncestors={ancestors}
-                searchCurrentIndex={currentMatchIndex}
-                sortKeys={sortKeys}
-                expandLong={expandLong}
-              />
-            ) : hasInput ? (
-              <div className="tree-empty error">
-                <em>当前输入无法解析为 JSON。</em>
-                <br />
-                可在左侧工具栏中尝试「去转义」。
-              </div>
-            ) : (
-              <div className="tree-empty">
-                <em>等待输入。</em>
-                <br />
-                在左侧粘贴 JSON，结构树将在此呈现。
-              </div>
-            )}
-          </div>
-        </section>
-      </main>
-
-      {popup && (
-        <ValuePopup
-          text={popup.text}
-          title={popup.title}
-          onClose={() => setPopup(null)}
-        />
-      )}
+      {view === 'format' ? <FormatTool /> : <JsonDiff />}
     </div>
   );
 }
