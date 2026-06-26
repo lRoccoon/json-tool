@@ -77,3 +77,11 @@ test('summarizeDiff 统计增删改', () => {
   const d = diffJson({ a: 1, b: 2, c: 3 }, { a: 9, c: 3, e: 5 }, noNested);
   assert.deepEqual(summarizeDiff(d), { added: 1, removed: 1, changed: 1 });
 });
+
+test('diffJson 递归比较普通嵌套对象', () => {
+  const d = diffJson({ a: { x: 1, y: 2 } }, { a: { x: 9, y: 2 } }, noNested);
+  const a = child(d, 'a');
+  assert.equal(a.status, 'children');
+  assert.equal(child(a, 'x').status, 'changed');
+  assert.equal(child(a, 'y').status, 'unchanged');
+});

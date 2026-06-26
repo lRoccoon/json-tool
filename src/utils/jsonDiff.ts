@@ -55,6 +55,7 @@ function diffValue(
         path,
         options
       );
+      // nestedParsed 表示两侧字符串已按 JSON 解析后再比较，与比较结果无关（结果为 unchanged 时也为 true）。
       return { ...node, nestedParsed: true };
     }
   }
@@ -75,8 +76,9 @@ function diffValue(
     );
   }
 
-  const equal = !isContainer(left) && !isContainer(right) && left === right;
-  return { key, path, status: equal ? 'unchanged' : 'changed', left, right };
+  // 走到这里只剩混合类型（数组 vs 对象 / 容器 vs 基础值）或两个基础值。
+  // 两个不同的对象/数组引用 === 永远为 false，所以混合类型自然落入 'changed'。
+  return { key, path, status: left === right ? 'unchanged' : 'changed', left, right };
 }
 
 function diffObject(
