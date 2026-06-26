@@ -6,6 +6,7 @@ export interface DiffApi {
   isExpanded: (path: string, depth: number) => boolean;
   toggleExpanded: (path: string, depth: number) => void;
   onlyDiff: boolean;
+  parseAll: boolean;
   onToggleNested: (path: string) => void;
 }
 
@@ -64,7 +65,8 @@ export function DiffRow({
         {!expanded && (
           <span className="diff-summary">
             {' '}
-            {visible.length} {unit} {close}
+            {api.onlyDiff ? `${visible.length}/${children.length}` : children.length}{' '}
+            {unit} {close}
           </span>
         )}
         {node.nestedParsed && <span className="diff-badge">nested</span>}
@@ -79,7 +81,12 @@ export function DiffRow({
             <button
               className="diff-act"
               onClick={() => api.onToggleNested(node.path)}
-              title="折叠嵌套 JSON"
+              disabled={api.parseAll}
+              title={
+                api.parseAll
+                  ? '已开启「全部解析嵌套」，关闭后才能单独折叠'
+                  : '折叠嵌套 JSON'
+              }
             >
               折叠嵌套
             </button>

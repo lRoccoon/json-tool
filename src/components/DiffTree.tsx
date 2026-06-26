@@ -6,6 +6,7 @@ interface DiffTreeProps {
   root: DiffNode;
   expandLevel: number;
   onlyDiff: boolean;
+  parseAll: boolean;
   onToggleNested: (path: string) => void;
 }
 
@@ -13,6 +14,7 @@ export function DiffTree({
   root,
   expandLevel,
   onlyDiff,
+  parseAll,
   onToggleNested,
 }: DiffTreeProps) {
   const [expandedOverride, setExpandedOverride] = useState<
@@ -41,9 +43,10 @@ export function DiffTree({
         });
       },
       onlyDiff,
+      parseAll,
       onToggleNested,
     }),
-    [expandedOverride, expandLevel, onlyDiff, onToggleNested]
+    [expandedOverride, expandLevel, onlyDiff, parseAll, onToggleNested]
   );
 
   return (

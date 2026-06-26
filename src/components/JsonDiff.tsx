@@ -50,7 +50,7 @@ export function JsonDiff() {
     parsed: ReturnType<typeof tryParseJson>,
     len: number
   ) => (
-    <div className="panel-footer">
+    <div className="panel-footer" role="status" aria-live="polite">
       <span className="footer-meta">
         {has ? `${len.toLocaleString()} 字符` : '等待输入'}
       </span>
@@ -76,6 +76,7 @@ export function JsonDiff() {
             onChange={(e) => setInputA(e.target.value)}
             placeholder="粘贴第一段 JSON（旧）…"
             spellCheck={false}
+            aria-label="旧 JSON（A）"
           />
           {renderStatus(hasA, parsedA, inputA.length)}
         </div>
@@ -91,6 +92,7 @@ export function JsonDiff() {
             onChange={(e) => setInputB(e.target.value)}
             placeholder="粘贴第二段 JSON（新）…"
             spellCheck={false}
+            aria-label="新 JSON（B）"
           />
           {renderStatus(hasB, parsedB, inputB.length)}
         </div>
@@ -147,14 +149,17 @@ export function JsonDiff() {
                 root={diff}
                 expandLevel={expandLevel}
                 onlyDiff={onlyDiff}
+                parseAll={parseAll}
                 onToggleNested={onToggleNested}
               />
             )
           ) : (
             <div className="tree-empty">
               <em>
-                {!hasA || !hasB
+                {!hasA && !hasB
                   ? '在上方粘贴两段 JSON 进行比较。'
+                  : !hasA || !hasB
+                  ? '请在另一侧粘贴 JSON 以开始比较。'
                   : '存在无法解析的 JSON，无法比较。'}
               </em>
             </div>
