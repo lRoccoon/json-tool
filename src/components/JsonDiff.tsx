@@ -68,32 +68,32 @@ export function JsonDiff() {
         <div className="diff-input-col">
           <div className="panel-label">
             <span className="panel-label-num">A</span>
-            <span className="panel-label-text">旧</span>
+            <span className="panel-label-text">Old</span>
             <span className="panel-label-rule" aria-hidden />
           </div>
           <textarea
             className="input-area"
             value={inputA}
             onChange={(e) => setInputA(e.target.value)}
-            placeholder="粘贴第一段 JSON（旧）…"
+            placeholder="粘贴第一段 JSON（Old）…"
             spellCheck={false}
-            aria-label="旧 JSON（A）"
+            aria-label="Old JSON（A）"
           />
           {renderStatus(hasA, parsedA, inputA.length)}
         </div>
         <div className="diff-input-col">
           <div className="panel-label">
             <span className="panel-label-num">B</span>
-            <span className="panel-label-text">新</span>
+            <span className="panel-label-text">New</span>
             <span className="panel-label-rule" aria-hidden />
           </div>
           <textarea
             className="input-area"
             value={inputB}
             onChange={(e) => setInputB(e.target.value)}
-            placeholder="粘贴第二段 JSON（新）…"
+            placeholder="粘贴第二段 JSON（New）…"
             spellCheck={false}
-            aria-label="新 JSON（B）"
+            aria-label="New JSON（B）"
           />
           {renderStatus(hasB, parsedB, inputB.length)}
         </div>
