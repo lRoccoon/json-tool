@@ -64,7 +64,7 @@ export function DiffRow({
         {!expanded && (
           <span className="diff-summary">
             {' '}
-            {children.length} {unit} {close}
+            {visible.length} {unit} {close}
           </span>
         )}
         {node.nestedParsed && <span className="diff-badge">nested</span>}

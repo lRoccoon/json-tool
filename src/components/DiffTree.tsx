@@ -19,6 +19,9 @@ export function DiffTree({
     Map<string, boolean>
   >(new Map());
 
+  // NOTE: callers must pass a memoized `root` (e.g. via useMemo). The reset below
+  // keys off `root` identity, so an unstable reference would wipe the user's
+  // expand/collapse state on every parent render.
   useEffect(() => {
     setExpandedOverride(new Map());
   }, [expandLevel, root]);
