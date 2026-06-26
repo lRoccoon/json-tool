@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { DiffTree } from './DiffTree';
 import { diffJson, summarizeDiff, type DiffNode } from '../utils/jsonDiff';
 import { tryParseJson, type JsonValue } from '../utils/jsonUtils';
@@ -34,13 +34,14 @@ export function JsonDiff() {
     summary !== null &&
     summary.added + summary.removed + summary.changed === 0;
 
-  const onToggleNested = (path: string) =>
+  const onToggleNested = useCallback((path: string) => {
     setParsedPaths((prev) => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
       return next;
     });
+  }, []);
 
   const hasA = inputA.trim().length > 0;
   const hasB = inputB.trim().length > 0;

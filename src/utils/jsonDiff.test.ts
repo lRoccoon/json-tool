@@ -85,3 +85,17 @@ test('diffJson 递归比较普通嵌套对象', () => {
   assert.equal(child(a, 'x').status, 'changed');
   assert.equal(child(a, 'y').status, 'unchanged');
 });
+
+test('diffJson 解析后同内容的不同格式 JSON 字符串判为 unchanged 且保留 nestedParsed', () => {
+  const a = { p: '{"n":1}' };
+  const b = { p: '{ "n": 1 }' };
+  assert.equal(child(diffJson(a, b, noNested), 'p').status, 'changed');
+  const p = child(diffJson(a, b, allNested), 'p');
+  assert.equal(p.status, 'unchanged');
+  assert.equal(p.nestedParsed, true);
+});
+
+test('summarizeDiff 不计入 children 容器本身，只计叶子', () => {
+  const d = diffJson({ a: { b: 1 }, c: 1 }, { a: { b: 2 }, c: 1 }, noNested);
+  assert.deepEqual(summarizeDiff(d), { added: 0, removed: 0, changed: 1 });
+});
