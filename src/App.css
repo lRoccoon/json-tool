@@ -1764,3 +1764,15 @@ body {
   background: var(--ink);
   border-color: var(--ink);
 }
+.app-nav-tab:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* diff view base layout (extended in the diff-layout section) */
+.diff-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}

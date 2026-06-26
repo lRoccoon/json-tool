@@ -20,9 +20,10 @@ export default function App() {
   }, []);
 
   const goTo = (next: View) => {
+    if (next === view) return;
     if (next === 'diff') {
       window.location.hash = 'diff';
-    } else if (viewFromHash() === 'diff') {
+    } else {
       history.replaceState(
         null,
         '',
@@ -50,6 +51,7 @@ export default function App() {
             <button
               type="button"
               className={`app-nav-tab${view === 'format' ? ' is-active' : ''}`}
+              aria-current={view === 'format' ? 'page' : undefined}
               onClick={() => goTo('format')}
             >
               格式化
@@ -57,6 +59,7 @@ export default function App() {
             <button
               type="button"
               className={`app-nav-tab${view === 'diff' ? ' is-active' : ''}`}
+              aria-current={view === 'diff' ? 'page' : undefined}
               onClick={() => goTo('diff')}
             >
               比较
